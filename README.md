@@ -122,7 +122,7 @@ Transition table can return values, so the above code can be written more tersly
 
 ``` cpp
     char const * transition_table(state_machine_base & sm,
-        int event_id, void * event_data)
+        int event_id, void * event_ptr)
     {
         transitions(sm, event_id, event_ptr)
         {
