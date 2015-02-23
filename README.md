@@ -12,7 +12,9 @@ compiler.
 
 First of all, you need to include Switch SM header.
 
+``` cpp
     #include <switch_sm.hpp>
+```
 
 Define `struct`s which correspond to states. States need to have public static
 nested unsigned integer named `id`. Each state should have its own unique `id`.
@@ -84,6 +86,34 @@ The output is:
     Already coding.
     Coder is tired and goes to sleep.
     Already sleeping.
+```
+
+### Accessing event data
+
+In each transition (compound) statement, you can access (hidden) `event`
+variable if you need event specific data. There is no polymorphism involved
+and event will be of the correct type:
+
+``` cpp
+        transitions(sm, event_id, event_ptr)
+        {
+            transition(Sleeping, WakeUp, Coding) {
+                static_assert(std::is_same<decltype(event), WakeUp &>::value,
+                "Invalid event type");
+            }
+            transition(Sleeping, Tired , Sleeping) {
+                static_assert(std::is_same<decltype(event), Tired &>::value,
+                "Invalid event type");
+            }
+            transition(Coding  , Tired , Sleeping) {
+                static_assert(std::is_same<decltype(event), Tired &>::value,
+                "Invalid event type");
+            }
+            transition(Coding  , WakeUp , Coding) {
+                static_assert(std::is_same<decltype(event), WakeUp &>::value,
+                "Invalid event type");
+            }
+        }
 ```
 
 ### Returning values from transition table

@@ -1,4 +1,4 @@
-#include "../switch_sm.hpp"
+#include "../include/switch_sm.hpp"
 
 #include <chrono>
 #include <iostream>
@@ -16,15 +16,15 @@ char const * transition_table(state_machine_base & sm, int event_id, void * even
 {
     transitions(sm, event_id, event_ptr)
     {
-        transition(State1, Event1, State1) { return "State1 Event1"; }
-        transition(State1, Event2, State2) { return "State1 Event2"; }
-        transition(State1, Event3, State3) { return "State1 Event3"; }
-        transition(State2, Event1, State1) { return "State2 Event1"; }
-        transition(State2, Event2, State2) { return "State2 Event2"; }
-        transition(State2, Event3, State3) { return "State2 Event3"; }
-        transition(State3, Event1, State1) { return "State3 Event1"; }
-        transition(State3, Event2, State2) { return "State3 Event2"; }
-        transition(State3, Event3, State3) { return "State3 Event3"; }
+        transition(State1, Event1, State1) { static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type"); return "State1 Event1"; }
+        transition(State1, Event2, State2) { static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type"); return "State1 Event2"; }
+        transition(State1, Event3, State3) { static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type"); return "State1 Event3"; }
+        transition(State2, Event1, State1) { static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type"); return "State2 Event1"; }
+        transition(State2, Event2, State2) { static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type"); return "State2 Event2"; }
+        transition(State2, Event3, State3) { static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type"); return "State2 Event3"; }
+        transition(State3, Event1, State1) { static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type"); return "State3 Event1"; }
+        transition(State3, Event2, State2) { static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type"); return "State3 Event2"; }
+        transition(State3, Event3, State3) { static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type"); return "State3 Event3"; }
         if_no_transition() { return "NO TRANSITION"; }
     }
     return "SHOULD NEVER HAPPEN";
