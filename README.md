@@ -71,7 +71,7 @@ All the ingredients are now in place.
         Tired tired;
         
         // Second parameter represents initial state for the state machine.
-        state_machine<TransitionTable, Sleeping> sm;
+        state_machine<TransitionTable, Sleeping> coder;
         coder.process_event(wakeUp);
         coder.process_event(wakeUp);
         coder.process_event(tired);
@@ -91,7 +91,7 @@ The output is:
 
 ### Accessing event data
 
-Each transition(s) (compound) statement has access to an `event` variable.
+Each transition's (compound) statement has access to an `event` variable.
 This variable is of the correct type, and can be used to access event specific
 data.
 
@@ -125,8 +125,7 @@ data.
 Transition table can return values, so the above code can be written more tersly:
 
 ``` cpp
-    char const * transition_table(state_machine_base & sm,
-        int event_id, void * event_data)
+    char const * operator()(state_machine_base & sm, int event_id, void * event_data)
     {
         transitions(sm, event_id, event_data)
         {
@@ -151,7 +150,7 @@ Transition table can return values, so the above code can be written more tersly
 ```
 
 State machine's `process_event` return value will match the return value of
-`transition_table`:
+`TransitionTable::operator()`:
 
 ``` cpp
         std::cout << coder.process_event(wakeUp);
@@ -163,25 +162,29 @@ State machine's `process_event` return value will match the return value of
 ## Performance
 
 Switch SM is basically only syntactic sugar for generating `switch`/`case`
-statement. State machine's double dispatch is performed by the `transition_table`.
-If written as described above, it will be preprocessed into a single `switch`
-statement and should provide **O**(1) execution speed.
+statement. State machine's double dispatch is performed by the
+`TransitionTable::operator()`. If written as described above, it will be
+preprocessed into a single `switch` statement and should provide **O**(1)
+execution speed.
 
-Compared to a simple state machine written in Boost.MSM, Switch SM is ~30-40%
-slower (tested on MSVC2013).
-This is not bad considering that Boost.MSM is the fastest guy around when it
-comes to runtime execution.
+Compared to a simple state machine written in
+[Boost.MSM](http://www.boost.org/doc/libs/release/libs/msm/doc/HTML/index.html),
+Switch SM ~25% slower (tested on MSVC2013). This is not bad considering that
+Boost.MSM is the fastest solution when it comes to SM runtime execution.
 
 ## Todo
 
-This is a work in progress. I hope to add additional features later on.
+* Tests missing. Shame on me.
+* Add additional features.
+    * Event queue (deferral).
 
 #### Other
 
 In case you have glanced at `switch_sm.hpp` and now are wondering what on earth
-are those evil macros doing - have a look at Duff's machine and Boost.ASIO
-stackless coroutines. The latter have inspired this little state machine
-utility.
+are those evil macros doing - have a look at
+[Duff's device](http://en.wikipedia.org/wiki/Duff%27s_device) and [Boost.ASIO
+stackless coroutines](http://www.boost.org/doc/libs/release/doc/html/boost_asio/reference/coroutine.html).
+The latter have inspired this little state machine utility.
 
 
 
