@@ -16,51 +16,51 @@ First of all, you need to include Switch SM header.
     #include <switch_sm.hpp>
 ```
 
-Define `struct`s which correspond to states. States need to have public static
-nested unsigned integer named `id`. Each state should have its own unique `id`.
-States are (currently) never instantiated.
+Define `struct`s which correspond to states. States are compile-time entities
+only and are (currently) never instantiated.
 
 ``` cpp
-    struct Sleeping { static unsigned int const id = 1; };
-    struct Coding { static unsigned int const id = 2; };
+    struct Sleeping {};
+    struct Coding {};
 ```
 
-Next, define some events. Events also need an `id`.
+Next, define some events:
 
 ``` cpp
-    struct WakeUp { static unsigned int const id = 1; };
-    struct Tired { static unsigned int const id = 2; };
+    struct WakeUp {};
+    struct Tired {};
 ```
-    
-**Note:** `ids` should really be counters, so start with `1` and increment.
-Don't use most significant 16 bits. I'd love to generate those at compile
-time if I find out how.
     
 Now define a transition table. It should look something like this:
 
 ``` cpp
-    void transition_table(state_machine_base & sm,
-        int event_id, void * event_data)
+    struct TransitionTable
     {
-        transitions(sm, event_id, event_ptr)
+        typedef std::tuple<Sleeping, Coding> States;
+        typedef std::tuple<WakeUp, Tired> Events;
+        
+        void operator()(state_machine_base & sm, int event_id, void * event_data)
         {
-            transition(Sleeping, WakeUp, Coding) {
-                std::cout << "Coder wakes up and starts coding.\n";
-            }
-            transition(Sleeping, Tired , Sleeping) {
-                std::cout << "Already sleeping.\n";
-            }
-            transition(Coding  , Tired , Sleeping) {
-                std::cout << "Coder is tired and goes to sleep.\n";
-            }
-            transition(Coding  , WakeUp , Coding) {
-                std::cout << "Already coding.\n";
-            }
-            if_no_transition() {
-                std::cout << "Unexpected event.\n";
+            transitions(sm, event_id, event_data)
+            {
+                transition(Sleeping, WakeUp, Coding) {
+                    std::cout << "Coder wakes up and starts coding.\n";
+                }
+                transition(Sleeping, Tired, Sleeping) {
+                    std::cout << "Coder is already sleeping.\n";
+                }
+                transition(Coding, Tired, Sleeping) {
+                    std::cout << "Coder is tired and goes to sleep.\n";
+                }
+                transition(Coding, WakeUp, Coding) {
+                    std::cout << "Coder is already coding.\n";
+                }
+                if_no_transition() {
+                    std::cout << "Unexpected event.\n";
+                }
             }
         }
-    }
+    };
 ```
 
 All the ingredients are now in place.
@@ -70,7 +70,8 @@ All the ingredients are now in place.
         WakeUp wakeUp;
         Tired tired;
         
-        auto coder = make_state_machine(transition_table, Sleeping::id);
+        // Second parameter represents initial state for the state machine.
+        state_machine<TransitionTable, Sleeping> sm;
         coder.process_event(wakeUp);
         coder.process_event(wakeUp);
         coder.process_event(tired);
@@ -90,30 +91,33 @@ The output is:
 
 ### Accessing event data
 
-In each transition (compound) statement, you can access (hidden) `event`
-variable if you need event specific data. There is no polymorphism involved
-and event will be of the correct type:
+Each transition(s) (compound) statement has access to an `event` variable.
+This variable is of the correct type, and can be used to access event specific
+data.
 
 ``` cpp
-        transitions(sm, event_id, event_ptr)
+    void operator()(state_machine_base & sm, int event_id, void * event_data)
+    {
+        transitions(sm, event_id, event_data)
         {
             transition(Sleeping, WakeUp, Coding) {
                 static_assert(std::is_same<decltype(event), WakeUp &>::value,
                 "Invalid event type");
             }
-            transition(Sleeping, Tired , Sleeping) {
+            transition(Sleeping, Tired, Sleeping) {
                 static_assert(std::is_same<decltype(event), Tired &>::value,
                 "Invalid event type");
             }
-            transition(Coding  , Tired , Sleeping) {
+            transition(Coding, Tired, Sleeping) {
                 static_assert(std::is_same<decltype(event), Tired &>::value,
                 "Invalid event type");
             }
-            transition(Coding  , WakeUp , Coding) {
+            transition(Coding, WakeUp, Coding) {
                 static_assert(std::is_same<decltype(event), WakeUp &>::value,
                 "Invalid event type");
             }
         }
+    }
 ```
 
 ### Returning values from transition table
@@ -122,9 +126,9 @@ Transition table can return values, so the above code can be written more tersly
 
 ``` cpp
     char const * transition_table(state_machine_base & sm,
-        int event_id, void * event_ptr)
+        int event_id, void * event_data)
     {
-        transitions(sm, event_id, event_ptr)
+        transitions(sm, event_id, event_data)
         {
             transition(Sleeping, WakeUp, Coding) {
                 return "Coder wakes up and starts coding.\n";
@@ -132,10 +136,10 @@ Transition table can return values, so the above code can be written more tersly
             transition(Sleeping, Tired , Sleeping) {
                 return "Already sleeping.\n";
             }
-            transition(Coding  , Tired , Sleeping) {
+            transition(Coding, Tired, Sleeping) {
                 return "Coder is tired and goes to sleep.\n";
             }
-            transition(Coding  , WakeUp , Coding) {
+            transition(Coding, WakeUp, Coding) {
                 return "Already coding.\n";
             }
             if_no_transition() {

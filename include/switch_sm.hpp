@@ -5,7 +5,26 @@
 #define switch_sm_HPP__3E5B04CB_54D4_4334_A529_A5C31A793E23
 //------------------------------------------------------------------------------
 #include <type_traits>
+#include <tuple>
 //------------------------------------------------------------------------------
+
+namespace detail {
+    template <typename T, typename Tuple>
+    struct index_of;
+
+    template <typename T, class... Types>
+    struct index_of<T, std::tuple<T, Types...>> {
+        static const std::size_t value = 0;
+    };
+
+    template <typename T, typename U, class... Types>
+    struct index_of<T, std::tuple<U, Types...>> {
+        typedef index_of<T, std::tuple<Types...>> next_index;
+        static_assert(!std::is_same<std::tuple<Types...>, std::tuple<>>::value,
+            "Type not found in tuple.");
+        static const std::size_t value = 1 + next_index::value;
+    };
+};
 
 struct state_machine_base
 {
@@ -66,11 +85,11 @@ struct sm_ref
         { \
             goto break_out; \
         } \
-        else case ((S::id) | (E::id << 15)): \
+        else case ((detail::index_of<S, States>::value) | ((detail::index_of<E, Events>::value + 1) << 15)): \
             for (E & event(*static_cast<E *>(_ev_ptr));; ) \
                 if (_sm_ref.in_transition) \
                     goto break_out; \
-                else if (_sm_ref.exit_state(T::id), true)
+                else if (_sm_ref.exit_state(detail::index_of<T, States>::value), true)
 
 #define if_no_transition() \
     for (;;) \
@@ -78,30 +97,23 @@ struct sm_ref
             goto break_out; \
         else default:
 
-template <typename Func>
+template <typename TransitionTable, typename InitialState>
 struct state_machine : public state_machine_base
 {
-    Func func;
+    typedef typename TransitionTable::States States;
+    typedef typename TransitionTable::Events Events;
+    TransitionTable transition_table;
 
-    template <typename... Args>
-    state_machine(Func && f, Args&&... args) :
-        func(f),
-        state_machine_base(std::forward<Args>(args)...)
-    {
-    }
+    state_machine() :
+        state_machine_base(detail::index_of<InitialState, States>::value) {}
 
     template <typename Event>
-    typename std::result_of<Func(state_machine_base &, int, void *)>::type process_event(Event & event)
+    typename std::result_of<TransitionTable(state_machine_base &, int, void *)>::type
+        process_event(Event & event)
     {
-        return func(*this, Event::id, &event);
+        return transition_table(*this, detail::index_of<Event, Events>::value + 1, &event);
     }
 };
-
-template <typename Func, typename... Args>
-state_machine<Func> make_state_machine(Func && f, Args &&... args)
-{
-    return state_machine<Func>(f, std::forward<Args>(args)...);
-}
 
 
 //------------------------------------------------------------------------------

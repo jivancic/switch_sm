@@ -3,32 +3,66 @@
 #include <chrono>
 #include <iostream>
 
-struct State1 { static int const id = 1; };
-struct State2 { static int const id = 2; };
-struct State3 { static int const id = 3; };
+struct State1 {};
+struct State2 {};
+struct State3 {};
 
-struct Event1 { static int const id = 1; };
-struct Event2 { static int const id = 2; };
-struct Event3 { static int const id = 3; };
-struct Event4 { static int const id = 4; };
+struct Event1 {};
+struct Event2 {};
+struct Event3 {};
+struct Event4 {};
 
-char const * transition_table(state_machine_base & sm, int event_id, void * event_ptr)
+struct TransitionTable
 {
-    transitions(sm, event_id, event_ptr)
+    typedef std::tuple<State1, State2, State3> States;
+    typedef std::tuple<Event1, Event2, Event3, Event4> Events;
+    
+    template <typename SMBase>
+    char const * operator()(SMBase & sm, int event_id, void * event_ptr)
     {
-        transition(State1, Event1, State1) { static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type"); return "State1 Event1"; }
-        transition(State1, Event2, State2) { static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type"); return "State1 Event2"; }
-        transition(State1, Event3, State3) { static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type"); return "State1 Event3"; }
-        transition(State2, Event1, State1) { static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type"); return "State2 Event1"; }
-        transition(State2, Event2, State2) { static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type"); return "State2 Event2"; }
-        transition(State2, Event3, State3) { static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type"); return "State2 Event3"; }
-        transition(State3, Event1, State1) { static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type"); return "State3 Event1"; }
-        transition(State3, Event2, State2) { static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type"); return "State3 Event2"; }
-        transition(State3, Event3, State3) { static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type"); return "State3 Event3"; }
-        if_no_transition() { return "NO TRANSITION"; }
+        transitions(sm, event_id, event_ptr)
+        {
+            transition(State1, Event1, State1) {
+                static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
+                return "State1 Event1";
+            }
+            transition(State1, Event2, State2) {
+                static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type");
+                return "State1 Event2";
+            }
+            transition(State1, Event3, State3) {
+                static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type");
+                return "State1 Event3";
+            }
+            transition(State2, Event1, State1) {
+                static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
+                return "State2 Event1";
+            }
+            transition(State2, Event2, State2) {
+                static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type");
+                return "State2 Event2";
+            }
+            transition(State2, Event3, State3) {
+                static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type");
+                return "State2 Event3";
+            }
+            transition(State3, Event1, State1) {
+                static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
+                return "State3 Event1";
+            }
+            transition(State3, Event2, State2) {
+                static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type");
+                return "State3 Event2";
+            }
+            transition(State3, Event3, State3) {
+                static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type");
+                return "State3 Event3";
+            }
+            if_no_transition() { return "NO TRANSITION"; }
+        }
+        return "SHOULD NEVER HAPPEN";
     }
-    return "SHOULD NEVER HAPPEN";
-}
+};
 
 #if 0
 #include <boost/msm/back/state_machine.hpp>
@@ -99,7 +133,7 @@ int main()
         Event3 event3;
         Event4 event4;
 
-        auto sm(make_state_machine(transition_table, State1::id));
+        state_machine<TransitionTable, State1> sm;
         auto start = std::chrono::high_resolution_clock::now();
         for (unsigned int x(0); x < 10 * 1000 * 1000; ++x)
         {
