@@ -84,9 +84,9 @@ The output is:
 
 ``` console
     Coder wakes up and starts coding.
-    Already coding.
+    Coder is already coding.
     Coder is tired and goes to sleep.
-    Already sleeping.
+    Coder is already sleeping.
 ```
 
 ### Accessing event data
@@ -133,13 +133,13 @@ Transition table can return values, so the above code can be written more tersly
                 return "Coder wakes up and starts coding.\n";
             }
             transition(Sleeping, Tired , Sleeping) {
-                return "Already sleeping.\n";
+                return "Coder is already sleeping.\n";
             }
             transition(Coding, Tired, Sleeping) {
                 return "Coder is tired and goes to sleep.\n";
             }
             transition(Coding, WakeUp, Coding) {
-                return "Already coding.\n";
+                return "Coder is already coding.\n";
             }
             if_no_transition() {
                 return "Unexpected event.\n";
