@@ -88,9 +88,7 @@ struct sm_ref
 #define transition(S, E, T) \
     for (;;) \
         if (true) \
-        { \
             goto break_out; \
-        } \
         else case ((detail::index_of<S, States>::value) | ((detail::index_of<E, Events>::value + 1) << 15)): \
             for (E & event(*static_cast<E *>(_ev_ptr));; ) \
                 if (_sm_ref.in_transition) \
@@ -118,10 +116,11 @@ struct state_machine : public state_machine_base
     }
 
     template <typename Event>
-    typename std::result_of<TransitionTable(state_machine_base &, int, void *)>::type
-        process_event(Event & event)
+    typename std::result_of<TransitionTable(state_machine_base &, int,
+        void *)>::type process_event(Event & event)
     {
-        return transition_table(*this, detail::index_of<Event, Events>::value + 1, &event);
+        return transition_table(*this,
+            detail::index_of<Event, Events>::value + 1, &event);
     }
 };
 
