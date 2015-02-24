@@ -110,8 +110,12 @@ struct state_machine : public state_machine_base
     typedef typename TransitionTable::Events Events;
     TransitionTable transition_table;
 
-    state_machine() :
-        state_machine_base(detail::index_of<InitialState, States>::value) {}
+    template <typename... Args>
+    state_machine(Args&&... args) :
+        state_machine_base(detail::index_of<InitialState, States>::value),
+        transition_table(std::forward<Args>(args)...)
+    {
+    }
 
     template <typename Event>
     typename std::result_of<TransitionTable(state_machine_base &, int, void *)>::type
