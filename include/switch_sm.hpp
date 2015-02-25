@@ -74,8 +74,8 @@ struct sm_ref
     bool in_transition;
 };
     
-#define transitions(sm, event_id, event_ptr) \
-    sm_ref _sm_ref(sm); \
+#define transitions(event_id, event_ptr) \
+    sm_ref _sm_ref(*sm_); \
     void * _ev_ptr = event_ptr; \
     switch (_sm_ref.state() | (event_id << 15)) \
         if (false) \
@@ -101,6 +101,23 @@ struct sm_ref
             goto break_out; \
         else default:
 
+
+template <typename States, typename Events>
+struct transition_table
+{
+    typedef States States;
+    typedef Events Events;
+
+    transition_table() : sm_(0) {}
+
+    void set_state_machine(state_machine_base & sm)
+    {
+        sm_ = &sm;
+    }
+    
+    state_machine_base * sm_;
+};
+        
 template <typename TransitionTable, typename InitialState>
 struct state_machine : public state_machine_base
 {
@@ -113,14 +130,20 @@ struct state_machine : public state_machine_base
         state_machine_base(detail::index_of<InitialState, States>::value),
         transition_table(std::forward<Args>(args)...)
     {
+        transition_table.set_state_machine(*this);
     }
 
     template <typename Event>
-    typename std::result_of<TransitionTable(state_machine_base &, int,
-        void *)>::type process_event(Event & event)
+    typename std::result_of<TransitionTable(int, void *)>::type
+        process_event(Event & event)
     {
-        return transition_table(*this,
-            detail::index_of<Event, Events>::value + 1, &event);
+        return transition_table(detail::index_of<Event, Events>::value + 1,
+            &event);
+    }
+
+    template <typename State>
+    bool current_state_is() const {
+        return state == detail::index_of<State, States>::value;
     }
 };
 

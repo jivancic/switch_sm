@@ -11,14 +11,14 @@ struct Event2 {std::string data; };
 struct Event3 {std::string data; };
 struct Event4 {};
 
-struct TransitionTable
+typedef std::tuple<State1, State2, State3> States;
+typedef std::tuple<Event1, Event2, Event3, Event4> Events;
+
+struct TransitionTable : public transition_table<States, Events>
 {
-    typedef std::tuple<State1, State2, State3> States;
-    typedef std::tuple<Event1, Event2, Event3, Event4> Events;
-    
-    std::string const * operator()(state_machine_base & sm, int event_id, void * event_ptr)
+    std::string const * operator()(int event_id, void * event_ptr)
     {
-        transitions(sm, event_id, event_ptr)
+        transitions(event_id, event_ptr)
         {
             transition(State1, Event1, State2) { return &event.data; }
             transition(State2, Event1, State3) { return &event.data; }

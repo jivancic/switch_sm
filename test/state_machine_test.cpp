@@ -12,15 +12,14 @@ struct Event2 {};
 struct Event3 {};
 struct Event4 {};
 
-struct TransitionTable
+typedef std::tuple<State1, State2, State3> States;
+typedef std::tuple<Event1, Event2, Event3, Event4> Events;
+
+struct TransitionTable : public transition_table<States, Events>
 {
-    typedef std::tuple<State1, State2, State3> States;
-    typedef std::tuple<Event1, Event2, Event3, Event4> Events;
-    
-    template <typename SMBase>
-    char const * operator()(SMBase & sm, int event_id, void * event_ptr)
+    char const * operator()(int event_id, void * event_ptr)
     {
-        transitions(sm, event_id, event_ptr)
+        transitions(event_id, event_ptr)
         {
             transition(State1, Event1, State1) {
                 static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
