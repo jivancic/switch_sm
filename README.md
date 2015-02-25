@@ -8,7 +8,7 @@ state machines.
 Tested with `Visual Studio 2013`, but should work with any `C++11` compliant
 compiler.
 
-## Usage
+## Basic usage
 
 First of all, you need to include Switch SM header.
 
@@ -116,16 +116,31 @@ event type. This data can be used to access additional event information.
     }
 ```
 
+### Passing parameters to transition table
+
+It is often useful to be able to modify an external resource when performing
+transitions. You can construct your transition table using non-default
+constructor by passing appropriate arguments to the state machine constructor:
+
+``` cpp
+        state_machine<Transitions, InitialState> coder(database);
+```
+
+In the above example, `database` parameter will be passed to the `Transitions`
+constructor.
+
 ### Conditional transitions
 
 If you want perform conditional transitions use the following syntax:
 
 ``` cpp
     on_event(State1, Event)
+    {
         if (event.transit_to_state2)
             transit_to(State2) { std::cout << "Transition to State2.\n" }
         else
             transit_to(State3) { std::cout << "Transition to State3.\n" }
+    }
 ```
 
 This technique can also be used to implement guarded transitions.
