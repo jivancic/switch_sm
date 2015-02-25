@@ -57,21 +57,28 @@ struct state_machine_base
 
 struct sm_ref
 {
-    sm_ref(state_machine_base & sm_) : sm(sm_), in_transition(false) {}
+    sm_ref(state_machine_base & sm_) : sm(sm_), was_executed(false) {}
     ~sm_ref() {
-        if (in_transition)
+        if (was_executed)
             sm.complete_transition();
     }
     
-    void exit_state(int next_state) {
+    void start_transition(int next_state) {
         sm.target_state = next_state;
-        in_transition = true;
     }
 
     int state() const { return sm.state; }
     
+    bool executed_check()
+    {
+        if (was_executed)
+            return true;
+        was_executed = true;
+        return false;
+    }
+    
     state_machine_base & sm;
-    bool in_transition;
+    bool was_executed;
 };
     
 #define transitions(event_id, event_ptr) \
@@ -85,22 +92,28 @@ struct sm_ref
         } \
         else case 0:
 
-#define transition(S, E, T) \
-    for (;;) \
-        if (true) \
-            goto break_out; \
-        else case ((detail::index_of<S, States>::value) | ((detail::index_of<E, Events>::value + 1) << 15)): \
+#define break_preamble \
+    for (;;) if (true) goto break_out; else
+        
+#define on_event(S, E) \
+    break_preamble \
+        case ((detail::index_of<S, States>::value) | \
+                ((detail::index_of<E, Events>::value + 1) << 15)): \
             for (E & event(*static_cast<E *>(_ev_ptr));; ) \
-                if (_sm_ref.in_transition) \
+                if (_sm_ref.executed_check()) \
                     goto break_out; \
-                else if (_sm_ref.exit_state(detail::index_of<T, States>::value), true)
+                else
 
-#define if_no_transition() \
-    for (;;) \
-        if (true) \
-            goto break_out; \
-        else default:
+#define transit_to(T) \
+    if (_sm_ref.start_transition(detail::index_of<T, States>::value), true)
 
+#define on_no_match() \
+    break_preamble \
+        default: \
+            for (;;) \
+            if (_sm_ref.executed_check()) \
+                goto break_out; \
+            else
 
 template <typename States, typename Events>
 struct transition_table

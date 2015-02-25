@@ -31,31 +31,35 @@ Next, define some events:
     struct Tired {};
 ```
     
+Wrap these into type lists:
+
+``` cpp
+    typedef std::tuple<Sleeping, Coding> States;
+    typedef std::tuple<WakeUp, Tired> Events;
+```
+    
 Now define a transition table. It should look something like this:
 
 ``` cpp
-    struct TransitionTable
+    struct CoderTransitions : public transition_table<States, Events>
     {
-        typedef std::tuple<Sleeping, Coding> States;
-        typedef std::tuple<WakeUp, Tired> Events;
-        
-        void operator()(state_machine_base & sm, int event_id, void * event_data)
+        void operator()(int event_id, void * event_data)
         {
-            transitions(sm, event_id, event_data)
+            transitions(event_id, event_data)
             {
-                transition(Sleeping, WakeUp, Coding) {
+                on_event(Sleeping, WakeUp) transit_to(Coding) {
                     std::cout << "Coder wakes up and starts coding.\n";
                 }
-                transition(Sleeping, Tired, Sleeping) {
+                on_event(Sleeping, Tired) {
                     std::cout << "Coder is already sleeping.\n";
                 }
-                transition(Coding, Tired, Sleeping) {
+                on_event(Coding, Tired) transit_to(Sleeping) {
                     std::cout << "Coder is tired and goes to sleep.\n";
                 }
-                transition(Coding, WakeUp, Coding) {
+                on_event(Coding, WakeUp) {
                     std::cout << "Coder is already coding.\n";
                 }
-                if_no_transition() {
+                on_no_match() {
                     std::cout << "Unexpected event.\n";
                 }
             }
@@ -71,7 +75,7 @@ All the ingredients are now in place.
         Tired tired;
         
         // Second parameter represents initial state for the state machine.
-        state_machine<TransitionTable, Sleeping> coder;
+        state_machine<CoderTransitions, Sleeping> coder;
         coder.process_event(wakeUp);
         coder.process_event(wakeUp);
         coder.process_event(tired);
@@ -91,57 +95,63 @@ The output is:
 
 ### Accessing event data
 
-Each transition's (compound) statement has access to an `event` variable.
-This variable is of the correct type, and can be used to access event specific
-data.
+In each `on_event` (compound) statement, `event_data` is cast into appropriate
+event type. This data can be used to access additional event information.
 
 ``` cpp
-    void operator()(state_machine_base & sm, int event_id, void * event_data)
+    void operator()(int event_id, void * event_data)
     {
-        transitions(sm, event_id, event_data)
+        transitions(event_id, event_data)
         {
-            transition(Sleeping, WakeUp, Coding) {
+            on_event(Sleeping, WakeUp) {
                 static_assert(std::is_same<decltype(event), WakeUp &>::value,
                 "Invalid event type");
             }
-            transition(Sleeping, Tired, Sleeping) {
+            on_event(Sleeping, Tired, Sleeping) {
                 static_assert(std::is_same<decltype(event), Tired &>::value,
                 "Invalid event type");
             }
-            transition(Coding, Tired, Sleeping) {
-                static_assert(std::is_same<decltype(event), Tired &>::value,
-                "Invalid event type");
-            }
-            transition(Coding, WakeUp, Coding) {
-                static_assert(std::is_same<decltype(event), WakeUp &>::value,
-                "Invalid event type");
-            }
+            // etc...
         }
     }
 ```
 
-### Returning values from transition table
+### Conditional transitions
 
-Transition table can return values, so the above code can be written more tersly:
+If you want perform conditional transitions use the following syntax:
 
 ``` cpp
-    char const * operator()(state_machine_base & sm, int event_id, void * event_data)
+    on_event(State1, Event)
+        if (event.transit_to_state2)
+            transit_to(State2) { std::cout << "Transition to State2.\n" }
+        else
+            transit_to(State3) { std::cout << "Transition to State3.\n" }
+```
+
+This technique can also be used to implement guarded transitions.
+
+### Returning values from transition table
+
+Transition table can return values, so our `Coder` transition table can be written more tersly:
+
+``` cpp
+    char const * operator()(int event_id, void * event_data)
     {
-        transitions(sm, event_id, event_data)
+        transitions(event_id, event_data)
         {
-            transition(Sleeping, WakeUp, Coding) {
+            on_event(Sleeping, WakeUp) transit_to(Coding) {
                 return "Coder wakes up and starts coding.\n";
             }
-            transition(Sleeping, Tired , Sleeping) {
+            on_event(Sleeping, Tired) {
                 return "Coder is already sleeping.\n";
             }
-            transition(Coding, Tired, Sleeping) {
+            on_event(Coding, Tired) transit_to(Sleeping) {
                 return "Coder is tired and goes to sleep.\n";
             }
-            transition(Coding, WakeUp, Coding) {
+            on_event(Coding, WakeUp) {
                 return "Coder is already coding.\n";
             }
-            if_no_transition() {
+            on_no_match() {
                 return "Unexpected event.\n";
             }
         }
@@ -150,7 +160,7 @@ Transition table can return values, so the above code can be written more tersly
 ```
 
 State machine's `process_event` return value will match the return value of
-`TransitionTable::operator()`:
+`CoderTransitions::operator()`:
 
 ``` cpp
         std::cout << coder.process_event(wakeUp);
@@ -162,8 +172,8 @@ State machine's `process_event` return value will match the return value of
 ## Performance
 
 Switch SM is basically only syntactic sugar for generating `switch`/`case`
-statement. State machine's double dispatch is performed by the
-`TransitionTable::operator()`. If written as described above, it will be
+statement. State machine's double dispatch is performed by the transition
+table's `operator()`. If written as described above, it will be
 preprocessed into a single `switch` statement and should provide **O**(1)
 execution speed.
 
@@ -174,8 +184,9 @@ Boost.MSM is the fastest solution when it comes to SM runtime execution.
 
 ## Todo
 
-* Tests missing. Shame on me.
+* Add more tests.
 * Add additional features.
+    * State entry/exit events.
     * Event queue (deferral).
 
 #### Other
