@@ -30,59 +30,59 @@ namespace detail {
             "Type not found in tuple.");
         static const std::size_t value = 1 + next_index::value;
     };
-};
 
-struct state_machine_base
-{
-    explicit state_machine_base(int initial_state)
-        : state(initial_state), target_state(-1)
-    {}
-
-    void complete_transition()
+    struct state_machine_base
     {
-        if (in_transition())
+        explicit state_machine_base(int initial_state)
+            : state(initial_state), target_state(-1)
+        {}
+
+        void complete_transition()
         {
-            state = target_state;
-            target_state = -1;
+            if (in_transition())
+            {
+                state = target_state;
+                target_state = -1;
+            }
         }
-    }
 
-    bool in_transition() const {
-        return target_state != -1;
-    }
+        bool in_transition() const {
+            return target_state != -1;
+        }
 
-    int state;
-    int target_state;
-};
+        int state;
+        int target_state;
+    };
 
-struct sm_ref
-{
-    sm_ref(state_machine_base & sm_) : sm(sm_), was_executed(false) {}
-    ~sm_ref() {
-        if (was_executed)
-            sm.complete_transition();
-    }
-    
-    void start_transition(int next_state) {
-        sm.target_state = next_state;
-    }
-
-    int state() const { return sm.state; }
-    
-    bool executed_check()
+    struct sm_ref
     {
-        if (was_executed)
-            return true;
-        was_executed = true;
-        return false;
-    }
-    
-    state_machine_base & sm;
-    bool was_executed;
-};
+        sm_ref(state_machine_base & sm_) : sm(sm_), was_executed(false) {}
+        ~sm_ref() {
+            if (was_executed)
+                sm.complete_transition();
+        }
+        
+        void start_transition(int next_state) {
+            sm.target_state = next_state;
+        }
+
+        int state() const { return sm.state; }
+        
+        bool executed_check()
+        {
+            if (was_executed)
+                return true;
+            was_executed = true;
+            return false;
+        }
+        
+        state_machine_base & sm;
+        bool was_executed;
+    };
+} // namespace detail
     
 #define transitions(event_id, event_ptr) \
-    sm_ref _sm_ref(*sm_); \
+    detail::sm_ref _sm_ref(*sm_); \
     void * _ev_ptr = event_ptr; \
     switch (_sm_ref.state() | (event_id << 15)) \
         if (false) \
@@ -123,16 +123,16 @@ struct transition_table
 
     transition_table() : sm_(0) {}
 
-    void set_state_machine(state_machine_base & sm)
+    void set_state_machine(detail::state_machine_base & sm)
     {
         sm_ = &sm;
     }
     
-    state_machine_base * sm_;
+    detail::state_machine_base * sm_;
 };
         
 template <typename TransitionTable, typename InitialState>
-struct state_machine : public state_machine_base
+struct state_machine : public detail::state_machine_base
 {
     typedef typename TransitionTable::States States;
     typedef typename TransitionTable::Events Events;
@@ -140,7 +140,7 @@ struct state_machine : public state_machine_base
 
     template <typename... Args>
     state_machine(Args&&... args) :
-        state_machine_base(detail::index_of<InitialState, States>::value),
+        detail::state_machine_base(detail::index_of<InitialState, States>::value),
         transition_table(std::forward<Args>(args)...)
     {
         transition_table.set_state_machine(*this);
@@ -155,8 +155,13 @@ struct state_machine : public state_machine_base
     }
 
     template <typename State>
+    static int state_id() {
+        return detail::index_of<State, States>::value;
+    }
+
+    template <typename State>
     bool current_state_is() const {
-        return state == detail::index_of<State, States>::value;
+        return state == state_id<State>();
     }
 };
 
