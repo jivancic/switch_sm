@@ -14,7 +14,7 @@ struct Event4 {bool condition; };
 typedef std::tuple<State1, State2, State3> States;
 typedef std::tuple<Event1, Event2, Event3, Event4> Events;
 
-struct TransitionTable : public transition_table<States, Events>
+struct ATransitionTable : public TransitionTable<States, Events>
 {
     std::string const * operator()(int event_id, void * event_ptr)
     {
@@ -34,7 +34,7 @@ struct TransitionTable : public transition_table<States, Events>
     }
 };
 
-typedef StateMachine<TransitionTable, State1> TestStateMachine;
+typedef StateMachine<ATransitionTable, State1> TestStateMachine;
 Event1 event1 = {"event1"};
 Event2 event2 = {"event2"};
 Event3 event3 = {"event3"};

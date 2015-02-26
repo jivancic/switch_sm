@@ -184,12 +184,12 @@ struct state
 };
                 
 template <typename States, typename Events>
-struct transition_table
+struct TransitionTable
 {
     typedef States States;
     typedef Events Events;
 
-    transition_table() : sm_(0) {}
+    TransitionTable() : sm_(0) {}
 
     void set_state_machine(detail::StateMachineBase<States, Events> & sm)
     {
@@ -199,16 +199,16 @@ struct transition_table
     detail::StateMachineBase<States, Events> * sm_;
 };
         
-template <typename TransitionTable, typename InitialState>
+template <typename TT, typename InitialState>
 struct StateMachine : public detail::StateMachineBase<
-    typename TransitionTable::States,
-    typename TransitionTable::Events
+    typename TT::States,
+    typename TT::Events
 >
 {
-    typedef typename TransitionTable::States States;
-    typedef typename TransitionTable::Events Events;
+    typedef typename TT::States States;
+    typedef typename TT::Events Events;
     typedef detail::StateMachineBase<States, Events> Base;
-    TransitionTable transition_table;
+    TT transition_table;
 
     template <typename... Args>
     StateMachine(Args&&... args) :
@@ -219,7 +219,7 @@ struct StateMachine : public detail::StateMachineBase<
     }
 
     template <typename Event>
-    typename std::result_of<TransitionTable(int, void *)>::type
+    typename std::result_of<TT(int, void *)>::type
         process_event(Event & event)
     {
         return transition_table(detail::IndexOf<Event, Events>::value,

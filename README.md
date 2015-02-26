@@ -54,7 +54,7 @@ Wrap these into type lists:
 Now define a transition table. It should look something like this:
 
 ``` cpp
-    struct CoderTransitions : public transition_table<States, Events>
+    struct CoderTransitions : public TransitionTable<States, Events>
     {
         void operator()(int event_id, void * event_data)
         {
@@ -88,7 +88,7 @@ All the ingredients are now in place.
         Tired tired;
         
         // Second parameter represents initial state for the state machine.
-        state_machine<CoderTransitions, Sleeping> coder;
+        StateMachine<CoderTransitions, Sleeping> coder;
         coder.process_event(wakeUp);
         coder.process_event(wakeUp);
         coder.process_event(tired);
@@ -137,12 +137,23 @@ It is often useful to be able to modify an external resource when processing
 state machine events. You can construct your transition table using non-default
 constructor by passing appropriate arguments to the state machine constructor:
 
+Say your transition table requires a `Database`.
+
 ``` cpp
-        state_machine<Transitions, InitialState> coder(database);
+        class Transitions : public TransitionTable<States, Event>
+        {
+            Transitions(Database &) { ... }
+            
+            // ...
+        };
 ```
 
-In the above example, `database` parameter will be passed to the `Transitions`
-constructor.
+Any arguments passed to `StateMachine` constructor are actually forwarded to
+the underlying transition table.
+
+``` cpp
+        StateMachine<Transitions, InitialState> coder(database);
+```
 
 ### Conditional transitions
 
@@ -203,13 +214,13 @@ State machine's `process_event` return value will match the return value of
 
 During each transition the following events occur.
 
-    * Source state `on_exit` event.
-    * Action code (i.e. compound statement trailing the `transit_to` keyword).
-    * Target state `on_entry` event.
+* Source state `on_exit` event.
+* Action code (i.e. compound statement trailing the `transit_to` keyword).
+* Target state `on_entry` event.
 
 Note that `on_entry` is not called for initial state.
 
-Note also that there are two ways to handle internal transition:
+Note also that there are two ways to handle internal transitions:
 
 ``` cpp
     // Will call on_exit(), action, on_entry().
