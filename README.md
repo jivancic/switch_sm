@@ -17,12 +17,25 @@ First of all, you need to include Switch SM header.
 ```
 
 Define `struct`s which correspond to states. States are compile-time entities
-only and are (currently) never instantiated.
+only and are never instantiated.
 
 ``` cpp
-    struct Sleeping {};
-    struct Coding {};
+    struct Sleeping : public state {};
+    struct Coding : public state {};
 ```
+
+States are required to have the following public static functions defined:
+
+``` cpp
+    template <typename Event>
+    void on_entry(Event & event);
+
+    template <typename Event>
+    void on_exit(Event & event);
+```
+
+If you don't require entry and exit events for a state, just inherit from
+`state` to provide default do-nothing implementations.
 
 Next, define some events:
 
@@ -95,8 +108,10 @@ The output is:
 
 ### Accessing event data
 
-In each `on_event` (compound) statement, `event_data` is cast into appropriate
-event type. This data can be used to access additional event information.
+In each `on_event` (compound) statement, `event_data` is cast into a variable
+named `event` which is of (correct) type. This data can be used to access
+additional event information. In other words, the following static assertions
+are true:
 
 ``` cpp
     void operator()(int event_id, void * event_data)
@@ -118,8 +133,8 @@ event type. This data can be used to access additional event information.
 
 ### Passing parameters to transition table
 
-It is often useful to be able to modify an external resource when performing
-transitions. You can construct your transition table using non-default
+It is often useful to be able to modify an external resource when processing
+state machine events. You can construct your transition table using non-default
 constructor by passing appropriate arguments to the state machine constructor:
 
 ``` cpp
@@ -184,6 +199,25 @@ State machine's `process_event` return value will match the return value of
         std::cout << coder.process_event(tired);
 ```
 
+## Transition events
+
+During each transition the following events occur.
+
+    * Source state `on_exit` event.
+    * Action code (i.e. compound statement trailing the `transit_to` keyword).
+    * Target state `on_entry` event.
+
+Note that `on_entry` is not called for initial state.
+
+Note also that there are two ways to handle internal transition:
+
+``` cpp
+    // Will call on_exit(), action, on_entry().
+    on_event(State, Event) transit_to(State) { action; }
+    // Will call action only.
+    on_event(State, Event) { action; }
+```
+
 ## Performance
 
 Switch SM is basically only syntactic sugar for generating `switch`/`case`
@@ -194,14 +228,13 @@ execution speed.
 
 Compared to a simple state machine written in
 [Boost.MSM](http://www.boost.org/doc/libs/release/libs/msm/doc/HTML/index.html),
-Switch SM ~25% slower (tested on MSVC2013). This is not bad considering that
-Boost.MSM is the fastest solution when it comes to SM runtime execution.
+Switch SM slower, but comparable (tested on MSVC2013). This is not bad considering
+that Boost.MSM is the fastest solution when it comes to SM runtime execution.
 
 ## Todo
 
 * Add more tests.
 * Add additional features.
-    * State entry/exit events.
     * Event queue (deferral).
 
 #### Other
@@ -210,7 +243,6 @@ In case you have glanced at `switch_sm.hpp` and now are wondering what on earth
 are those evil macros doing - have a look at
 [Duff's device](http://en.wikipedia.org/wiki/Duff%27s_device) and [Boost.ASIO
 stackless coroutines](http://www.boost.org/doc/libs/release/doc/html/boost_asio/reference/coroutine.html).
-The latter have inspired this little state machine utility.
 
 
 

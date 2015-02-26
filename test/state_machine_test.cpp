@@ -3,9 +3,11 @@
 #include <chrono>
 #include <iostream>
 
-struct State1 {};
-struct State2 {};
-struct State3 {};
+#define TEST_MSM 0
+
+struct State1 : public state {};
+struct State2 : public state {};
+struct State3 : public state {};
 
 struct Event1 {};
 struct Event2 {};
@@ -21,49 +23,49 @@ struct TransitionTable : public transition_table<States, Events>
     {
         transitions(event_id, event_ptr)
         {
-            transition(State1, Event1, State1) {
+            on_event(State1, Event1) transit_to(State1) {
                 static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
                 return "State1 Event1";
             }
-            transition(State1, Event2, State2) {
+            on_event(State1, Event2) transit_to(State2) {
                 static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type");
                 return "State1 Event2";
             }
-            transition(State1, Event3, State3) {
+            on_event(State1, Event3) transit_to(State3) {
                 static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type");
                 return "State1 Event3";
             }
-            transition(State2, Event1, State1) {
+            on_event(State2, Event1) transit_to(State1) {
                 static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
                 return "State2 Event1";
             }
-            transition(State2, Event2, State2) {
+            on_event(State2, Event2) transit_to(State2) {
                 static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type");
                 return "State2 Event2";
             }
-            transition(State2, Event3, State3) {
+            on_event(State2, Event3) transit_to(State3) {
                 static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type");
                 return "State2 Event3";
             }
-            transition(State3, Event1, State1) {
+            on_event(State3, Event1) transit_to(State1) {
                 static_assert(std::is_same<decltype(event), Event1 &>::value, "Invalid event type");
                 return "State3 Event1";
             }
-            transition(State3, Event2, State2) {
+            on_event(State3, Event2) transit_to(State2) {
                 static_assert(std::is_same<decltype(event), Event2 &>::value, "Invalid event type");
                 return "State3 Event2";
             }
-            transition(State3, Event3, State3) {
+            on_event(State3, Event3) transit_to(State3) {
                 static_assert(std::is_same<decltype(event), Event3 &>::value, "Invalid event type");
                 return "State3 Event3";
             }
-            if_no_transition() { return "NO TRANSITION"; }
+            on_no_match() { return "NO TRANSITION"; }
         }
         return "SHOULD NEVER HAPPEN";
     }
 };
 
-#if 0
+#if TEST_MSM
 #include <boost/msm/back/state_machine.hpp>
 #include <boost/msm/front/state_machine_def.hpp>
 
@@ -132,9 +134,9 @@ int main()
         Event3 event3;
         Event4 event4;
 
-        state_machine<TransitionTable, State1> sm;
+        StateMachine<TransitionTable, State1> sm;
         auto start = std::chrono::high_resolution_clock::now();
-        for (unsigned int x(0); x < 10 * 1000 * 1000; ++x)
+        for (unsigned int x(0); x < 100 * 1000 * 1000; ++x)
         {
             sm.process_event(event1);
             sm.process_event(event2);
@@ -148,7 +150,7 @@ int main()
             << '\n';
     }
 
-#if 0
+#if TEST_MSM
     {
         test_fsm::Event1 event1;
         test_fsm::Event2 event2;
@@ -157,7 +159,7 @@ int main()
     
         test_fsm::msm_sm sm;
         auto start = std::chrono::high_resolution_clock::now();
-        for (unsigned int x(0); x < 10 * 1000 * 1000; ++x)
+        for (unsigned int x(0); x < 100 * 1000 * 1000; ++x)
         {
             sm.process_event(event1);
             sm.process_event(event2);

@@ -16,11 +16,15 @@ endforeach()
 enable_testing()
 find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIRS})
-set(gtest_force_shared_crt ON CACHE BOOL "Always use msvcrt.dll")
 
 add_executable(test_simple test_simple.cpp)
 target_link_libraries(test_simple ${GTEST_BOTH_LIBRARIES})
 
+add_executable(test_tuple_switch test_tuple_switch.cpp)
+target_link_libraries(test_tuple_switch ${GTEST_BOTH_LIBRARIES})
+
 add_test(TestSimple test_simple)
+add_test(TestTupleSwitch test_tuple_switch)
 
 add_custom_command(TARGET test_simple POST_BUILD COMMAND test_simple)
+add_custom_command(TARGET test_tuple_switch POST_BUILD COMMAND test_tuple_switch)
