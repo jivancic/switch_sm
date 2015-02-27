@@ -230,6 +230,15 @@ Note also that there are two ways to handle internal transitions:
     on_event(State, Event) { action; }
 ```
 
+## Event deferral
+
+Event can be deferred, i.e. placed in a queue and re-processed after the
+next transition. To defer an event use `defer_event` pseudo-keyword:
+
+``` cpp
+    on_event(State, Event) defer_event() {}
+```
+
 ## Performance
 
 Switch SM is basically only syntactic sugar for generating `switch`/`case`
@@ -246,8 +255,6 @@ that Boost.MSM is the fastest solution when it comes to SM runtime execution.
 ## Todo
 
 * Add more tests.
-* Add additional features.
-    * Event queue (deferral).
 
 #### Other
 

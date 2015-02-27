@@ -10,8 +10,11 @@
 #ifndef switch_sm_HPP__3E5B04CB_54D4_4334_A529_A5C31A793E23
 #define switch_sm_HPP__3E5B04CB_54D4_4334_A529_A5C31A793E23
 //------------------------------------------------------------------------------
-#include <type_traits>
+#include <algorithm>
+#include <deque>
+#include <functional>
 #include <tuple>
+#include <type_traits>
 //------------------------------------------------------------------------------
 
 namespace detail {
@@ -118,7 +121,7 @@ namespace detail {
         if (t.check()) \
             goto break_out; \
         else
-
+            
 #define on_no_match() \
     break_preamble \
         default: \
@@ -126,6 +129,9 @@ namespace detail {
             if (branch_taken.check()) \
                 goto break_out; \
             else
+                
+#define defer_event() \
+    if (sm_->queue_event(event), true)
 
 struct state
 {
@@ -233,9 +239,26 @@ public:
         state_ = target_state_;
         target_state_ = -1;
         call_entry(event);
+        if (!event_queue_.empty())
+            handle_event_queue();
+    }
+    
+    template <typename Event>
+    void queue_event(Event & event)
+    {
+        event_queue_.push_back(
+            [this, event]() mutable { process_event<Event>(event); });
     }
 
 private:
+    void handle_event_queue()
+    {
+        std::deque<std::function<void()> > new_queue;
+        new_queue.swap(event_queue_);
+        std::for_each(new_queue.begin(), new_queue.end(), [](std::function<void()> const & f) { f(); });
+    }
+
+
     template <typename Event>
     void call_entry(Event & event)
     {
@@ -250,6 +273,7 @@ private:
 
 private:
     TT transition_table;
+    std::deque<std::function<void()> > event_queue_;
     int state_;
     int target_state_;
 };
