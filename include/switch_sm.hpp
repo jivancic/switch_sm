@@ -49,33 +49,6 @@ namespace detail {
                 std::forward<Args>(args)...);
     }
 
-    template <typename States, typename Events>
-    struct StateMachineBase
-    {
-        typedef States States;
-        typedef Events Events;
-
-        explicit StateMachineBase(int initial_state)
-            : state(initial_state), target_state(-1)
-        {}
-
-        void complete_transition()
-        {
-            if (in_transition())
-            {
-                state = target_state;
-                target_state = -1;
-            }
-        }
-
-        bool in_transition() const {
-            return target_state != -1;
-        }
-
-        int state;
-        int target_state;
-    };
-
     struct FalseOnce
     {
         FalseOnce() : was_false_(false) {}
@@ -91,55 +64,35 @@ namespace detail {
         bool was_false_;
     };
 
-    template <typename Base, typename Event>
+    template <typename SM, typename Event>
     struct TransitionHandler : FalseOnce
     {
-        struct CallExit
+        TransitionHandler(SM & sm, Event & event, int state)
+            : sm_(sm), event_(event)
         {
-            template <typename State, typename Event>
-            void operator()(State, Event & event)
-            {
-                State::on_exit(event);
-            }
-        };
-
-        struct CallEntry
-        {
-            template <typename State, typename Event>
-            void operator()(State, Event & event)
-            {
-                State::on_entry(event);
-            }
-        };
-
-        TransitionHandler(Base & sm_base, Event & event, int state)
-            : sm_base_(sm_base), event_(event)
-        {
-            TupleSwitch<typename Base::States>(sm_base_.state, CallEntry(), event);
-            sm_base_.target_state = state;
+            sm_.begin_transition(event_, state);
         }
 
         ~TransitionHandler()
         {
-            sm_base_.complete_transition();
-            TupleSwitch<typename Base::States>(sm_base_.state, CallExit(), event_);
+            sm_.end_transition(event_);
         }
         
         Event & event_;
-        Base & sm_base_;
+        SM & sm_;
     };
     
-    template <typename Base, typename Event>
-    TransitionHandler<Base, Event> handle_transition(Base & sm, Event & event, int state)
+    template <typename SM, typename Event>
+    TransitionHandler<SM, Event> handle_transition(SM & sm, Event & event, int state)
     {
-        return TransitionHandler<Base, Event>(sm, event, state);
+        return TransitionHandler<SM, Event>(sm, event, state);
     }
 } // namespace detail
     
 #define transitions(event_id, event_ptr) \
     detail::FalseOnce branch_taken; \
     void * _ev_ptr = event_ptr; \
-    switch (sm_->state | (event_id << 15)) \
+    switch (sm_->state() | (event_id << 15)) \
         if (false) \
         { \
             break_out: \
@@ -183,7 +136,10 @@ struct state
     inline static void on_exit(Event &) {}
 };
                 
-template <typename States, typename Events>
+template <typename TT>
+class StateMachine;
+                
+template <typename Derived, typename States, typename Events>
 struct TransitionTable
 {
     typedef States States;
@@ -191,35 +147,61 @@ struct TransitionTable
 
     TransitionTable() : sm_(0) {}
 
-    void set_state_machine(detail::StateMachineBase<States, Events> & sm)
+    void set_state_machine(StateMachine<Derived> & sm)
     {
         sm_ = &sm;
     }
-    
-    detail::StateMachineBase<States, Events> * sm_;
+
+    StateMachine<Derived> * sm_;
 };
         
-template <typename TT, typename InitialState>
-struct StateMachine : public detail::StateMachineBase<
-    typename TT::States,
-    typename TT::Events
->
+struct InitialEvent {};
+        
+template <typename TT>
+class StateMachine
 {
-    typedef typename TT::States States;
-    typedef typename TT::Events Events;
-    typedef detail::StateMachineBase<States, Events> Base;
-    TT transition_table;
+private:
+    struct CallExit
+    {
+        template <typename State, typename Event>
+        void operator()(State, Event & event)
+        {
+            State::on_exit(event);
+        }
+    };
+
+    struct CallEntry
+    {
+        template <typename State, typename Event>
+        void operator()(State, Event & event)
+        {
+            State::on_entry(event);
+        }
+    };
+
+public:
+    typedef TT TransitionTable;
+    typedef typename TransitionTable::States States;
+    typedef typename TransitionTable::Events Events;
 
     template <typename... Args>
     StateMachine(Args&&... args) :
-        Base(detail::IndexOf<InitialState, States>::value),
-        transition_table(std::forward<Args>(args)...)
+        transition_table(std::forward<Args>(args)...),
+        state_(-1), target_state_(-1)
     {
         transition_table.set_state_machine(*this);
     }
+    
+    template <typename InitialState, typename Event=InitialEvent>
+    void start()
+    {
+        state_ = detail::IndexOf<InitialState, States>::value;
+        Event event;
+        call_entry(event);
+    }
 
     template <typename Event>
-    typename std::result_of<TT(int, void *)>::type
+    typename std::result_of<TransitionTable(int, void *)>::type
         process_event(Event & event)
     {
         return transition_table(detail::IndexOf<Event, Events>::value,
@@ -231,10 +213,45 @@ struct StateMachine : public detail::StateMachineBase<
         return detail::IndexOf<State, States>::value;
     }
 
+    int state() const {
+        return state_;
+    }
+
     template <typename State>
     bool current_state_is() const {
-        return state == state_id<State>();
+        return state_ == state_id<State>();
     }
+
+    template <typename Event>
+    void begin_transition(Event & event, int state) {
+        call_exit(event);
+        target_state_ = state;
+    }
+
+    template <typename Event>
+    void end_transition(Event & event) {
+        state_ = target_state_;
+        target_state_ = -1;
+        call_entry(event);
+    }
+
+private:
+    template <typename Event>
+    void call_entry(Event & event)
+    {
+        detail::TupleSwitch<States>(state_, CallEntry(), event);
+    }
+
+    template <typename Event>
+    void call_exit(Event & event)
+    {
+        detail::TupleSwitch<States>(state_, CallExit(), event);
+    }
+
+private:
+    TT transition_table;
+    int state_;
+    int target_state_;
 };
 
 

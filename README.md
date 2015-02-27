@@ -54,7 +54,8 @@ Wrap these into type lists:
 Now define a transition table. It should look something like this:
 
 ``` cpp
-    struct CoderTransitions : public TransitionTable<States, Events>
+    struct CoderTransitions :
+        public TransitionTable<CoderTransitions, States, Events>
     {
         void operator()(int event_id, void * event_data)
         {
@@ -87,8 +88,10 @@ All the ingredients are now in place.
         WakeUp wakeUp;
         Tired tired;
         
-        // Second parameter represents initial state for the state machine.
-        StateMachine<CoderTransitions, Sleeping> coder;
+        StateMachine<CoderTransitions> coder;
+        // Start the machine with the initial state.
+        coder.start<State1>();
+
         coder.process_event(wakeUp);
         coder.process_event(wakeUp);
         coder.process_event(tired);
@@ -217,8 +220,6 @@ During each transition the following events occur.
 * Source state `on_exit` event.
 * Action code (i.e. compound statement trailing the `transit_to` keyword).
 * Target state `on_entry` event.
-
-Note that `on_entry` is not called for initial state.
 
 Note also that there are two ways to handle internal transitions:
 

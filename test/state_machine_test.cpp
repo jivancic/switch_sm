@@ -17,7 +17,7 @@ struct Event4 {};
 typedef std::tuple<State1, State2, State3> States;
 typedef std::tuple<Event1, Event2, Event3, Event4> Events;
 
-struct TransitionTable : public transition_table<States, Events>
+struct ATransitionTable : public TransitionTable<ATransitionTable, States, Events>
 {
     char const * operator()(int event_id, void * event_ptr)
     {
@@ -134,7 +134,8 @@ int main()
         Event3 event3;
         Event4 event4;
 
-        StateMachine<TransitionTable, State1> sm;
+        StateMachine<ATransitionTable> sm;
+        sm.start<State1>();
         auto start = std::chrono::high_resolution_clock::now();
         for (unsigned int x(0); x < 100 * 1000 * 1000; ++x)
         {

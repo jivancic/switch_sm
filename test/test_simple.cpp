@@ -14,7 +14,7 @@ struct Event4 {bool condition; };
 typedef std::tuple<State1, State2, State3> States;
 typedef std::tuple<Event1, Event2, Event3, Event4> Events;
 
-struct ATransitionTable : public TransitionTable<States, Events>
+struct ATransitionTable : public TransitionTable<ATransitionTable, States, Events>
 {
     std::string const * operator()(int event_id, void * event_ptr)
     {
@@ -34,7 +34,7 @@ struct ATransitionTable : public TransitionTable<States, Events>
     }
 };
 
-typedef StateMachine<ATransitionTable, State1> TestStateMachine;
+typedef StateMachine<ATransitionTable> TestStateMachine;
 Event1 event1 = {"event1"};
 Event2 event2 = {"event2"};
 Event3 event3 = {"event3"};
@@ -42,6 +42,7 @@ Event4 event4;
 
 TEST(test_simple, test_transition) {
     TestStateMachine sm;
+    sm.start<State1>();
     EXPECT_TRUE(sm.current_state_is<State1>());
     sm.process_event(event1); EXPECT_TRUE(sm.current_state_is<State2>());
     sm.process_event(event1); EXPECT_TRUE(sm.current_state_is<State3>());
@@ -57,6 +58,7 @@ TEST(test_simple, test_transition) {
 
 TEST(test_simple, test_result) {
     TestStateMachine sm;
+    sm.start<State1>();
     EXPECT_TRUE(sm.process_event(event1) == &event1.data);
     EXPECT_TRUE(sm.process_event(event2) == &event2.data);
     EXPECT_TRUE(sm.process_event(event3) == &event3.data);
